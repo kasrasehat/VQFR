@@ -1,6 +1,6 @@
 # general settings
 name: train_vqfr_v1_B16_200K
-model_type: VQFRModel
+model_type: VQFRv1Model
 num_gpu: auto
 manual_seed: 0
 syncbn: true # must set to true to avoid bn inplace revision
@@ -9,7 +9,7 @@ datasets:
   train:
     name: FFHQ
     type: FFHQDegradationDataset
-    dataroot_gt: datasets/ffhq/ffhq_512
+    dataroot_gt: /home/user1/kasra/pycharm-projects/VQFR/datasets/FFHQ/train/hq
     io_backend:
       type: disk
     use_hflip: true
@@ -25,17 +25,19 @@ datasets:
     jpeg_range: [60, 100]
     use_shuffle: true
     num_worker_per_gpu: 6
-    batch_size_per_gpu: 2
+    batch_size_per_gpu: 1
     dataset_enlarge_ratio: 1
     prefetch_mode: ~
+    target_size_h: 512
+    target_size_w: 512
 
   val:
     # Please modify accordingly to use your own validation
     # Or comment the val block if do not need validation during training
     name: validation
     type: PairedImageDataset
-    dataroot_lq: datasets/Validation/SR_Validation
-    dataroot_gt: datasets/Validation/SR_Validation
+    dataroot_lq: /home/user1/kasra/pycharm-projects/VQFR/datasets/FFHQ/validation/hq
+    dataroot_gt: /home/user1/kasra/pycharm-projects/VQFR/datasets/FFHQ/validation/lq
     io_backend:
       type: disk
     mean: [0.5, 0.5, 0.5]
@@ -95,7 +97,7 @@ network_sr:
 
 # network structures
 network_g:
-  type: VQGAN
+  type: VQGANv1
   base_channels: 128
   proj_patch_size: 32
   resolution_scale_rates: [ 1,2,2,2,2,2 ]
@@ -105,7 +107,7 @@ network_g:
   quant_level: [ 'Level_32' ]
   quantizer_opt:
     Level_32:
-      type: L2VectorQuantizer
+      type: L2VectorQuantizerKmeans
       in_dim: 512
       num_code: 1024
       code_dim: 256
@@ -143,7 +145,7 @@ path:
   pretrain_network_g: experiments/pretrained_models/VQ_Codebook_FFHQ512-39165968.pth
   param_key_g: params
   strict_load_g: ~
-  pretrain_network_sr: experiments/pretrained_models/VQ_Codebook_FFHQ512-39165968.pth
+  pretrain_network_sr: /home/user1/kasra/pycharm-projects/VQFR/experiments/pretrained_models/VQFR_v1-33a1fac5.pth
   param_key_sr: params
   strict_load_sr: false
   pretrain_network_d_main_local:

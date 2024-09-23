@@ -19,10 +19,24 @@ def init_dist(launcher, backend='nccl', **kwargs):
 
 
 def _init_dist_pytorch(backend, **kwargs):
-    rank = int(os.environ['RANK'])
+    # rank = int(os.environ['RANK'])
+    # num_gpus = torch.cuda.device_count()
+    # torch.cuda.set_device(rank % num_gpus)
+    # dist.init_process_group(backend=backend, **kwargs)
     num_gpus = torch.cuda.device_count()
-    torch.cuda.set_device(rank % num_gpus)
-    dist.init_process_group(backend=backend, **kwargs)
+    if num_gpus > 1:
+         # Set default environment variables if they don't exist
+        os.environ.setdefault('RANK', '0')
+        os.environ.setdefault('WORLD_SIZE', '1')
+        os.environ.setdefault('MASTER_ADDR', 'localhost')
+        os.environ.setdefault('MASTER_PORT', '12355')
+
+        rank = int(os.environ['RANK'])
+        torch.cuda.set_device(rank % num_gpus)
+        dist.init_process_group(backend=backend, **kwargs)
+        print(f"Distributed initialized: rank {rank}, total GPUs {num_gpus}")
+    else:
+        print("Running on a single GPU, distributed initialization skipped.")
 
 
 def _init_dist_slurm(backend, port=None):

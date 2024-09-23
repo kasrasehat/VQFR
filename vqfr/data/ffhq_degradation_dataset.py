@@ -183,6 +183,11 @@ class FFHQDegradationDataset(data.Dataset):
                 img_gt = cv2.cvtColor(img_gt, cv2.COLOR_BGR2GRAY)
                 img_gt = np.tile(img_gt[:, :, None], [1, 1, 3])
 
+        # Resize both lq and hq images
+        # resize to original size
+        img_lq = cv2.resize(img_lq, (self.opt["target_size_w"], self.opt["target_size_h"]), interpolation=cv2.INTER_LINEAR)
+        # resize to original size
+        img_gt = cv2.resize(img_gt, (self.opt["target_size_w"], self.opt["target_size_h"]), interpolation=cv2.INTER_LINEAR)
         # BGR to RGB, HWC to CHW, numpy to tensor
         img_gt, img_lq = img2tensor([img_gt, img_lq], bgr2rgb=True, float32=True)
 

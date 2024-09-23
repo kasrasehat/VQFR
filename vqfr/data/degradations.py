@@ -5,11 +5,91 @@ import random
 import torch
 from scipy import special
 from scipy.stats import multivariate_normal
-from torchvision.transforms.functional_tensor import rgb_to_grayscale
+from torchvision.transforms.functional import rgb_to_grayscale
+import scipy.ndimage
+import PIL
+
 
 # -------------------------------------------------------------------- #
-# --------------------------- blur kernels --------------------------- #
+# --------------------------- Denoising --------------------------- #
+def imdenoise(image, strength):
+    denoised = cv2.fastNlMeansDenoisingColored((image * 255).astype(np.uint8), None, strength, strength, 7, 21)
+    return denoised.astype(np.float32) / 255.0
+
 # -------------------------------------------------------------------- #
+# --------------------------- pixelation --------------------------- #
+def impixelate(image, factor):
+    h, w = image.shape[:2]
+    small_h, small_w = max(1, h // factor), max(1, w // factor)
+    small = cv2.resize(image, (small_w, small_h), interpolation=cv2.INTER_LINEAR)
+    pixelated_image = cv2.resize(small, (w, h), interpolation=cv2.INTER_NEAREST)
+    return pixelated_image
+# -------------------------------------------------------------------- #
+# --------------------------- LENS blur kernels --------------------------- #
+def lens_blur(img, radius=5):
+    """
+    Apply a circular lens blur (bokeh effect) to the image.
+    
+    Args:
+        img (numpy array): The input image.
+        radius (int): Radius of the lens blur.
+    
+    Returns:
+        numpy array: Blurred image.
+    """
+    # Create a circular kernel
+    size = 2 * radius + 1
+    y, x = np.ogrid[-radius:radius+1, -radius:radius+1]
+    mask = x**2 + y**2 <= radius**2
+    kernel = np.zeros((size, size))
+    kernel[mask] = 1
+    kernel = kernel / kernel.sum()
+
+    # Apply the lens blur kernel to each channel
+    img_blurred = np.zeros_like(img)
+    for i in range(img.shape[2]):
+        img_blurred[:, :, i] = scipy.ndimage.convolve(img[:, :, i], kernel, mode='reflect')
+    
+    return img_blurred
+
+# -------------------------------------------------------------------- #
+# --------------------------- Motion blur --------------------------- #
+# -------------------------------------------------------------------- #
+def imblurmotion(image, amount):
+    # Create a motion blur kernel
+    kernel = np.zeros((amount, amount))
+    kernel[int((amount - 1) / 2), :] = np.ones(amount)
+    kernel = kernel / amount
+    return cv2.filter2D(image, -1, kernel)
+
+# -------------------------------------------------------------------- #
+# --------------------------- contrast --------------------------- #
+# -------------------------------------------------------------------- #
+# def imcontrastc(image, factor):
+#     # Adjust contrast using PIL's ImageEnhance
+#     pil_image = Image.fromarray((image * 255).astype(np.uint8))
+#     enhancer = ImageEnhance.Contrast(pil_image)
+#     contrast_image = enhancer.enhance(factor)
+#     return np.array(contrast_image).astype(np.float32) / 255.0
+
+# -------------------------------------------------------------------- #
+# --------------------------- Impulse Noise --------------------------- #
+# -------------------------------------------------------------------- #
+def imnoiseimpulse(image, amount):
+    output = np.copy(image)
+    h, w = image.shape[:2]
+    num_salt = np.ceil(amount * h * w * 0.5).astype(int)
+    num_pepper = np.ceil(amount * h * w * 0.5).astype(int)
+
+    # Add salt noise
+    coords = [np.random.randint(0, i - 1, num_salt) for i in (h, w)]
+    output[coords[0], coords[1], :] = 1.0  # White pixels
+
+    # Add pepper noise
+    coords = [np.random.randint(0, i - 1, num_pepper) for i in (h, w)]
+    output[coords[0], coords[1], :] = 0.0  # Black pixels
+
+    return output
 
 
 # --------------------------- util functions --------------------------- #
@@ -194,8 +274,10 @@ def random_bivariate_Gaussian(kernel_size,
         assert noise_range[0] < noise_range[1], 'Wrong noise range.'
         noise = np.random.uniform(noise_range[0], noise_range[1], size=kernel.shape)
         kernel = kernel * noise
+    else:
+        noise = None
     kernel = kernel / np.sum(kernel)
-    return kernel
+    return sigma_x, sigma_y,  rotation, noise, kernel
 
 
 def random_bivariate_generalized_Gaussian(kernel_size,
@@ -324,10 +406,10 @@ def random_mixed_kernels(kernel_list,
     """
     kernel_type = random.choices(kernel_list, kernel_prob)[0]
     if kernel_type == 'iso':
-        kernel = random_bivariate_Gaussian(
+        sigma_x, sigma_y,  rotation, noise, kernel = random_bivariate_Gaussian(
             kernel_size, sigma_x_range, sigma_y_range, rotation_range, noise_range=noise_range, isotropic=True)
     elif kernel_type == 'aniso':
-        kernel = random_bivariate_Gaussian(
+        sigma_x, sigma_y,  rotation, noise, kernel = random_bivariate_Gaussian(
             kernel_size, sigma_x_range, sigma_y_range, rotation_range, noise_range=noise_range, isotropic=False)
     elif kernel_type == 'generalized_iso':
         kernel = random_bivariate_generalized_Gaussian(
@@ -353,7 +435,7 @@ def random_mixed_kernels(kernel_list,
     elif kernel_type == 'plateau_aniso':
         kernel = random_bivariate_plateau(
             kernel_size, sigma_x_range, sigma_y_range, rotation_range, betap_range, noise_range=None, isotropic=False)
-    return kernel
+    return kernel_type, sigma_x, sigma_y,  rotation, noise, kernel
 
 
 np.seterr(divide='ignore', invalid='ignore')
@@ -692,7 +774,7 @@ def add_jpg_compression(img, quality=90):
             float32.
     """
     img = np.clip(img, 0, 1)
-    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
+    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), int(quality)]
     _, encimg = cv2.imencode('.jpg', img * 255., encode_param)
     img = np.float32(cv2.imdecode(encimg, 1)) / 255.
     return img

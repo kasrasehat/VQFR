@@ -4,6 +4,8 @@ import math
 import time
 import torch
 from os import path as osp
+import sys
+sys.path.append("/home/user1/kasra/pycharm-projects/VQFR")
 
 from vqfr.data import build_dataloader, build_dataset
 from vqfr.data.data_sampler import EnlargedSampler
