@@ -11,131 +11,11 @@ from vqfr.data.transforms import augment
 from vqfr.utils import img2tensor
 import tqdm
 import csv
-# class LowQualityImageGenerator:
-#     def __init__(self, opt):
-#         self.opt = opt
-#         self.gt_folder = opt['dataroot_gt']
-#         self.lq_folder = os.path.join(os.path.dirname(self.gt_folder), 'lq')
-#         os.makedirs(self.lq_folder, exist_ok=True)
-
-#         self.mean = opt['mean']
-#         self.std = opt['std']
-#         self.out_size = opt['out_size']
-
-#         self.crop_components = opt.get('crop_components', False)
-#         self.eye_enlarge_ratio = opt.get('eye_enlarge_ratio', 1)
-
-#         if self.crop_components:
-#             self.components_list = torch.load(opt.get('component_path'))
-
-#         self.blur_kernel_size = opt['blur_kernel_size']
-#         self.kernel_list = opt['kernel_list']
-#         self.kernel_prob = opt['kernel_prob']
-#         self.blur_sigma = opt['blur_sigma']
-#         self.downsample_range = opt['downsample_range']
-#         self.noise_range = opt['noise_range']
-#         self.jpeg_range = opt['jpeg_range']
-#         self.recon_prob = opt.get('recon_prob', 0)
-
-#         self.color_jitter_prob = opt.get('color_jitter_prob')
-#         self.color_jitter_pt_prob = opt.get('color_jitter_pt_prob')
-#         self.color_jitter_shift = opt.get('color_jitter_shift', 20)
-#         self.gray_prob = opt.get('gray_prob')
-
-#         self.color_jitter_shift /= 255.
-
-#     def generate_lq_images(self):
-#         image_paths = [os.path.join(self.gt_folder, f) for f in os.listdir(self.gt_folder) if os.path.isfile(os.path.join(self.gt_folder, f))]
-#         for img_path in tqdm.tqdm(image_paths):
-#             img_name = os.path.basename(img_path)
-#             img_gt = cv2.imread(img_path)
-#             img_gt = img_gt.astype(np.float32) / 255.0
-
-#             # Random horizontal flip
-#             img_gt, status = augment(img_gt, hflip=self.opt['use_hflip'], rotation=False, return_status=True)
-#             h, w, _ = img_gt.shape
-
-#             if self.crop_components:
-#                 locations = self.get_component_coordinates(img_name, status)
-#                 loc_left_eye, loc_right_eye, loc_mouth = locations
-
-#             if random.random() < self.recon_prob:
-#                 img_lq = img_gt
-#             else:
-#                 # Degrade the image
-#                 img_lq = self.degrade_image(img_gt, w, h)
-
-#             # Save the low-quality image
-#             lq_path = os.path.join(self.lq_folder, img_name)
-#             cv2.imwrite(lq_path, img_lq * 255.0)
-
-#     def degrade_image(self, img_gt, w, h):
-#         # Blur
-#         kernel = degradations.random_mixed_kernels(
-#             self.kernel_list,
-#             self.kernel_prob,
-#             self.blur_kernel_size,
-#             self.blur_sigma,
-#             self.blur_sigma, [-math.pi, math.pi],
-#             noise_range=None)
-#         img_lq = cv2.filter2D(img_gt, -1, kernel)
-
-#         # Downsample
-#         scale = np.random.uniform(self.downsample_range[0], self.downsample_range[1])
-#         img_lq = cv2.resize(img_lq, (int(w // scale), int(h // scale)), interpolation=cv2.INTER_LINEAR)
-
-#         # Add noise
-#         if self.noise_range is not None:
-#             img_lq = degradations.random_add_gaussian_noise(img_lq, self.noise_range)
-
-#         # JPEG compression
-#         if self.jpeg_range is not None:
-#             img_lq = degradations.random_add_jpg_compression(img_lq, self.jpeg_range)
-
-#         # Resize back to original size
-#         img_lq = cv2.resize(img_lq, (w, h), interpolation=cv2.INTER_LINEAR)
-
-#         # Random color jitter
-#         if self.color_jitter_prob is not None and (np.random.uniform() < self.color_jitter_prob):
-#             img_lq = self.color_jitter(img_lq, self.color_jitter_shift)
-
-#         # Random grayscale
-#         if self.gray_prob and np.random.uniform() < self.gray_prob:
-#             img_lq = cv2.cvtColor(img_lq, cv2.COLOR_BGR2GRAY)
-#             img_lq = np.tile(img_lq[:, :, None], [1, 1, 3])
-
-#         return img_lq
-
-#     @staticmethod
-#     def color_jitter(img, shift):
-#         jitter_val = np.random.uniform(-shift, shift, 3).astype(np.float32)
-#         img = img + jitter_val
-#         img = np.clip(img, 0, 1)
-#         return img
-
-#     def get_component_coordinates(self, index, status):
-#         components_bbox = self.components_list[f'{index:08d}']
-#         if status[0]:  # hflip
-#             # Exchange right and left eye
-#             tmp = components_bbox['left_eye']
-#             components_bbox['left_eye'] = components_bbox['right_eye']
-#             components_bbox['right_eye'] = tmp
-#             # Modify the width coordinate
-#             components_bbox['left_eye'][0] = self.out_size - components_bbox['left_eye'][0]
-#             components_bbox['right_eye'][0] = self.out_size - components_bbox['right_eye'][0]
-#             components_bbox['mouth'][0] = self.out_size - components_bbox['mouth'][0]
-
-#         # Get coordinates
-#         locations = []
-#         for part in ['left_eye', 'right_eye', 'mouth']:
-#             mean = components_bbox[part][0:2]
-#             half_len = components_bbox[part][2]
-#             if 'eye' in part:
-#                 half_len *= self.eye_enlarge_ratio
-#             loc = np.hstack((mean - half_len + 1, mean + half_len))
-#             loc = torch.from_numpy(loc).float()
-#             locations.append(loc)
-#         return locations
+import csv
+import cv2
+import random
+import numpy as np
+from scipy.ndimage import convolve
 
 class LowQualityImageGenerator:
     def __init__(self, opt):
@@ -296,11 +176,6 @@ class LowQualityImageGenerator:
         return locations
     
  
-import csv
-import cv2
-import random
-import numpy as np
-from scipy.ndimage import convolve
 
 class LowQualityImageGeneratorV2:
     def __init__(self, opt):
