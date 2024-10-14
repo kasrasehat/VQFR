@@ -8,21 +8,22 @@ syncbn: true # must set to true to avoid bn inplace revision
 datasets:
   name: FFHQ
   type: FFHQDegradationDataset
-  dataroot_gt: /home/user1/kasra/pycharm-projects/VQFR/datasets/FFHQ/validation/hq
+  dataroot_gt: /home/user1/kasra/pycharm-projects/BFRffusion/assets/validation/hq
+  # /home/user1/kasra/pycharm-projects/VQFR/datasets/FFHQ/validation/hq
   io_backend:
     type: disk
-  use_hflip: true
+  use_hflip: False
   mean: [0.5, 0.5, 0.5]
   std: [0.5, 0.5, 0.5]
   out_size: 512
-  gaussian_blur_prob: 0.3
-  blur_kernel_size: 21
+  gaussian_blur_prob: 0.4
+  blur_kernel_size: 17
   kernel_list: ['iso', 'aniso']
   kernel_prob: [0.5, 0.5]
-  blur_sigma: [0.1, 10]
-  downsample_range: [0.8, 8]
-  noise_range: [0, 20]
-  jpeg_range: [60, 100]
+  blur_sigma: [0.1, 5]
+  downsample_range: [0.8, 4]
+  noise_range: [0, 10]
+  jpeg_range: [70, 100]
   use_shuffle: true
   num_worker_per_gpu: 6
   batch_size_per_gpu: 2
@@ -35,11 +36,14 @@ datasets:
   lens_blur_prob: 0.25
   lens_blur_radius: 5
 ##########################################  
-  motion_blur_prob: 0.2            # Probability to apply motion blur
-  motion_blur_amount: [5, 15]      # Range of kernel sizes for motion blur
+  motion_blur_prob: 0.1            # Probability to apply motion blur
+  motion_blur_amount: [1, 8]      # Range of kernel sizes for motion blur
 ##########################################
   impulse_noise_prob: 0.1                # Probability to add impulse noise
   impulse_noise_amount: [0.01, 0.05]     # Amount of impulse noise
   ##########################################
   denoise_prob: 0.1                    # Probability to apply denoising
-  denoise_strength_range: [5, 15]      # Denoising strength range
+  denoise_strength_range: [1, 10]      # Denoising strength range
+  ##########################################
+  pixelate_prob: 0.1          # Probability to apply pixelation (adjust as needed)
+  pixelate_factor: [1, 5]     # Pixelation factor range

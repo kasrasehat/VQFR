@@ -230,18 +230,18 @@ class LowQualityImageGeneratorV2:
     def create_csv_header(self):
         header = ['Image_Name', 'blur_kernel_size', 'gau_kernel_type', 'gau_sigma_x', 'gau_sigma_y', 'gau_rotation', 'gau_noise', 'Lens_Blur_Radius', 'motion_blur_amount',
                   'Downsample_Scale', 'impulse_noise_amount', 
-                  'Noise_Std', 'pixelate_factor', 'JPEG_Quality', 'Denoise_Strength', 'Color_Jitter_Shift', 'denoise_strength', 'Grayscale_Applied']
+                  'Noise_Std', 'pixelate_factor', 'JPEG_Quality', 'Denoise_Strength', 'Color_Jitter_Shift', 'Grayscale_Applied']
         with open(self.csv_file_path, mode='w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(header)
 
     def log_degradation_params(self, img_name, blur_kernel_size, gau_kernel_type, gau_sigma_x, gau_sigma_y, gau_rotation, gau_noise, lens_blur_radius, motion_blur_amount, 
-                               scale, impulse_noise_amount, noise_std, pixelate_factor, jpeg_quality, 
-                               color_jitter_shift, denoise_strength, grayscale_applied):
+                               scale, impulse_noise_amount, noise_std, pixelate_factor, jpeg_quality, Denoise_Strength, color_jitter_shift, grayscale_applied):
+        
         with open(self.csv_file_path, mode='a', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow([img_name, blur_kernel_size, gau_kernel_type, gau_sigma_x, gau_sigma_y, gau_rotation, gau_noise, lens_blur_radius,
-                             motion_blur_amount, scale, impulse_noise_amount, noise_std, pixelate_factor, jpeg_quality, color_jitter_shift, denoise_strength, grayscale_applied])
+            writer.writerow([img_name, blur_kernel_size, gau_kernel_type, gau_sigma_x, gau_sigma_y, gau_rotation, gau_noise, lens_blur_radius, motion_blur_amount, 
+                             scale, impulse_noise_amount, noise_std, pixelate_factor, jpeg_quality, Denoise_Strength, color_jitter_shift, grayscale_applied])
 
     def generate_lq_images(self):
         image_paths = [os.path.join(self.gt_folder, f) for f in os.listdir(self.gt_folder) if os.path.isfile(os.path.join(self.gt_folder, f))]
@@ -260,10 +260,10 @@ class LowQualityImageGeneratorV2:
 
             if random.random() < self.recon_prob:
                 img_lq = img_gt
-                blur_kernel_size, gau_kernel_type, gau_sigma_x, gau_sigma_y, gau_rotation, gau_noise, lens_blur_radius, motion_blur_amount, scale, impulse_noise_amount, noise_std, pixelate_factor, jpeg_quality, color_jitter_shift, denoise_strength, grayscale_applied = (None, None, None, None, None, None, None, None, False)
+                blur_kernel_size, gau_kernel_type, gau_sigma_x, gau_sigma_y, gau_rotation, gau_noise, lens_blur_radius, motion_blur_amount, scale, impulse_noise_amount, noise_std, pixelate_factor, jpeg_quality, Denoise_Strength, color_jitter_shift, grayscale_applied = (None, None, None, None, None, None, None, None, False)
             else:
                 # Degrade the image
-                img_lq, blur_kernel_size, gau_kernel_type, gau_sigma_x, gau_sigma_y, gau_rotation, gau_noise, lens_blur_radius, motion_blur_amount, scale, impulse_noise_amount, noise_std, pixelate_factor, jpeg_quality, color_jitter_shift, denoise_strength, grayscale_applied = self.degrade_image(img_gt, w, h)
+                img_lq, blur_kernel_size, gau_kernel_type, gau_sigma_x, gau_sigma_y, gau_rotation, gau_noise, lens_blur_radius, motion_blur_amount, scale, impulse_noise_amount, noise_std, pixelate_factor, jpeg_quality, Denoise_Strength, color_jitter_shift, grayscale_applied = self.degrade_image(img_gt, w, h)
 
             # Save the low-quality image
             lq_path = os.path.join(self.lq_folder, img_name)
@@ -271,7 +271,7 @@ class LowQualityImageGeneratorV2:
 
             # Log degradation parameters to CSV
             self.log_degradation_params(img_name, blur_kernel_size, gau_kernel_type, gau_sigma_x, gau_sigma_y, gau_rotation, gau_noise, lens_blur_radius, motion_blur_amount,
-                                         scale, impulse_noise_amount,noise_std, pixelate_factor, jpeg_quality, color_jitter_shift, denoise_strength, grayscale_applied)
+                                         scale, impulse_noise_amount,noise_std, pixelate_factor, jpeg_quality, Denoise_Strength, color_jitter_shift, grayscale_applied)
 
     def degrade_image(self, img_gt, w, h):
         img_lq = img_gt.copy()  # Start with the original high-quality image
@@ -370,7 +370,7 @@ class LowQualityImageGeneratorV2:
         else:
             grayscale_applied = False
 
-        return img_lq, self.blur_kernel_size, gau_kernel_type, gau_sigma_x, gau_sigma_y, gau_rotation, gau_noise, lens_blur_radius, motion_blur_amount, scale, impulse_noise_amount, noise_std, pixelate_factor, jpeg_quality, color_jitter_shift, denoise_strength, grayscale_applied
+        return img_lq, self.blur_kernel_size, gau_kernel_type, gau_sigma_x, gau_sigma_y, gau_rotation, gau_noise, lens_blur_radius, motion_blur_amount, scale, impulse_noise_amount, noise_std, pixelate_factor, jpeg_quality, denoise_strength, color_jitter_shift, grayscale_applied
 
     @staticmethod
     def color_jitter(img, shift):
